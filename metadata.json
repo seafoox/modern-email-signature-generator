@@ -1,0 +1,5 @@
+{
+  "name": "Modern Email Signature Wizard",
+  "description": "A tool to create and customize professional email signatures with a live preview. Enter your details, choose your accent color, and copy the generated HTML to use in your email client.",
+  "requestFramePermissions": []
+}
