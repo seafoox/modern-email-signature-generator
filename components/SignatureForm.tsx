@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { SignatureData, TranslationSet } from '../types';
 
 interface SignatureFormProps {
   data: SignatureData;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onReset: () => void;
   t: TranslationSet['form'];
 }
 
@@ -42,24 +44,39 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
     </fieldset>
 );
 
-const SignatureForm: React.FC<SignatureFormProps> = ({ data, onInputChange, t }) => {
+const SignatureForm: React.FC<SignatureFormProps> = ({ data, onInputChange, onReset, t }) => {
   return (
     <form className="space-y-10">
-      <h2 className="text-2xl font-bold text-slate-900 border-b pb-4">{t.title}</h2>
+      <div className="flex justify-between items-center border-b pb-4">
+        <h2 className="text-2xl font-bold text-slate-900">{t.title}</h2>
+        <button
+          type="button"
+          onClick={onReset}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          aria-label={t.resetButton}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M15.325 4.875a.75.75 0 00-1.06-1.06l-.813.812a6.983 6.983 0 00-10.9 6.25a.75.75 0 001.499-.054a5.484 5.484 0 019.226-4.593l-.811.811a.75.75 0 001.06 1.06l2.122-2.122a.75.75 0 000-1.06l-2.122-2.122zM4.675 15.125a.75.75 0 001.06 1.06l.813-.812a6.983 6.983 0 0010.9-6.25a.75.75 0 00-1.5.054a5.484 5.484 0 01-9.226 4.593l.811-.811a.75.75 0 00-1.06-1.06l-2.122 2.122a.75.75 0 000 1.06l2.122 2.122z" clipRule="evenodd" />
+          </svg>
+          <span>{t.resetButton}</span>
+        </button>
+      </div>
       
       <Section title={t.personalInfo}>
         <InputField label={t.firstName} name="firstName" value={data.firstName} onChange={onInputChange} placeholder="e.g., Emily" />
         <InputField label={t.lastName} name="lastName" value={data.lastName} onChange={onInputChange} placeholder="e.g., Cooper" />
-        <InputField label={t.role} name="role" value={data.role} onChange={onInputChange} placeholder="e.g., Marketing Associate" />
-        <InputField label={t.company} name="company" value={data.company} onChange={onInputChange} placeholder="e.g., Savoir" />
+        <InputField label={t.role} name="role" value={data.role} onChange={onInputChange} className="sm:col-span-2" placeholder="e.g., Marketing Associate" />
+        <InputField label={t.email} name="email" type="email" value={data.email} onChange={onInputChange} placeholder="e.g., emily.cooper@savoir.com" />
+        <InputField label={t.phoneNumber} name="phoneNumber" type="tel" value={data.phoneNumber} onChange={onInputChange} placeholder="e.g., +33 7 12 34 56 78" />
         <InputField label={t.pictureUrl} name="pictureUrl" type="url" value={data.pictureUrl} onChange={onInputChange} className="sm:col-span-2" placeholder="https://..." />
       </Section>
 
-      <Section title={t.contactDetails}>
-        <InputField label={t.email} name="email" type="email" value={data.email} onChange={onInputChange} placeholder="e.g., emily.cooper@savoir.com" />
-        <InputField label={t.phoneNumber} name="phoneNumber" type="tel" value={data.phoneNumber} onChange={onInputChange} placeholder="e.g., +33 7 12 34 56 78" />
+      <Section title={t.companyInfo}>
+        <InputField label={t.company} name="company" value={data.company} onChange={onInputChange} className="sm:col-span-2" placeholder="e.g., Savoir" />
         <InputField label={t.address} name="address" value={data.address} onChange={onInputChange} className="sm:col-span-2" placeholder="e.g., 1 Place de l'Estrapade, 75005 Paris" />
         <InputField label={t.websiteUrl} name="websiteUrl" type="url" value={data.websiteUrl} onChange={onInputChange} className="sm:col-span-2" placeholder="https://..." />
+        <InputField label={t.quote} name="quote" value={data.quote} onChange={onInputChange} className="sm:col-span-2" placeholder="e.g., Your company motto..." />
+        <InputField label={t.disclaimer} name="disclaimer" value={data.disclaimer} onChange={onInputChange} className="sm:col-span-2" placeholder="e.g., Ce message est confidentiel..." />
       </Section>
 
       <Section title={t.socialMedia}>
@@ -78,11 +95,6 @@ const SignatureForm: React.FC<SignatureFormProps> = ({ data, onInputChange, t })
           <InputField label={t.bookVisitLabel} name="bookVisitLabel" value={data.bookVisitLabel} onChange={onInputChange} className="sm:col-span-3" />
         </div>
       </fieldset>
-      
-      <Section title={t.misc}>
-        <InputField label={t.quote} name="quote" value={data.quote} onChange={onInputChange} className="sm:col-span-2" placeholder="e.g., Your company motto..." />
-        <InputField label={t.disclaimer} name="disclaimer" value={data.disclaimer} onChange={onInputChange} className="sm:col-span-2" placeholder="e.g., Ce message est confidentiel..." />
-      </Section>
     </form>
   );
 };

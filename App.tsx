@@ -6,10 +6,86 @@ import SignaturePreview from './components/SignaturePreview';
 import LanguageSelector from './components/LanguageSelector';
 import ColorCustomizer from './components/ColorCustomizer';
 import ThemeToggler from './components/ThemeToggler';
+import ShareTemplate from './components/ShareTemplate';
 import { translations } from './translations';
 
 type Language = keyof typeof translations;
 type Theme = 'light' | 'dark';
+
+// Helper function to copy plain text to clipboard with a fallback mechanism.
+const copyTextToClipboard = (text: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(resolve).catch(err => {
+        console.warn('Clipboard API failed, falling back to execCommand.', err);
+        fallbackCopyText(text, resolve, reject);
+      });
+    } else {
+      fallbackCopyText(text, resolve, reject);
+    }
+  });
+};
+
+const fallbackCopyText = (text: string, resolve: () => void, reject: (reason?: any) => void) => {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'absolute';
+  textArea.style.left = '-9999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      resolve();
+    } else {
+      reject(new Error('Fallback copy method failed.'));
+    }
+  } catch (err) {
+    reject(err);
+  } finally {
+    document.body.removeChild(textArea);
+  }
+};
+
+const fallbackCopyHtml = (html: string, resolve: () => void, reject: (reason?: any) => void) => {
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.innerHTML = html;
+    document.body.appendChild(tempDiv);
+    
+    const range = document.createRange();
+    range.selectNodeContents(tempDiv);
+    const selection = window.getSelection();
+    if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            resolve();
+        } else {
+            reject(new Error('Fallback HTML copy failed.'));
+        }
+    } catch (err) {
+        reject(err);
+    } finally {
+        document.body.removeChild(tempDiv);
+        if (window.getSelection()) {
+            window.getSelection()?.removeAllRanges();
+        }
+    }
+};
+
+// Helper function to copy HTML to clipboard using a robust fallback method.
+const copyHtmlToClipboard = (html: string): Promise<void> => {
+   return new Promise((resolve, reject) => {
+        fallbackCopyHtml(html, resolve, reject);
+   });
+};
 
 const getComplementaryColor = (hex: string): string => {
   if (!hex || hex.length < 4) return '#4A4A4A'; // Return a default if hex is invalid
@@ -35,45 +111,114 @@ const getComplementaryColor = (hex: string): string => {
   }
 };
 
+const LOCAL_STORAGE_KEY = 'emailSignatureWizardState';
+
+const defaultSignatureData: SignatureData = {
+  firstName: "Emily",
+  lastName: "Cooper",
+  role: "Marketing Associate",
+  company: "Savoir",
+  phoneNumber: "+33 7 12 34 56 78",
+  email: "emily.cooper@savoir.com",
+  address: "1 Place de l'Estrapade, 75005 Paris, France",
+  pictureUrl: "https://i.pravatar.cc/100?u=emilycooper",
+  instagramUrl: "https://www.instagram.com/emilyinparis",
+  facebookUrl: "",
+  linkedinUrl: "https://www.linkedin.com/in/emily-cooper-savoir",
+  websiteUrl: "https://savoir.com",
+  youtubeUrl: "",
+  primaryColor: "#D81B60",
+  secondaryColor: "#3D5A80",
+  disclaimer: "Ce message est confidentiel. Merci de ne pas l'imprimer pour préserver l'environnement.",
+  quote: "Bring your vision to life with our customizable furniture designs!",
+  bookCallUrl: "",
+  bookVisitUrl: "",
+  bookCallLabel: translations.fr.preview.bookCallButton,
+  bookVisitLabel: translations.fr.preview.bookVisitButton,
+};
 
 const App: React.FC = () => {
-  const [lang, setLang] = useState<Language>('fr');
-  const t = translations[lang];
-  const [theme, setTheme] = useState<Theme>('light');
-  const [layout, setLayout] = useState<SignatureLayout>('classic');
+  // Load initial state from local storage or set defaults
+  const loadInitialState = () => {
+    try {
+      const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedStateJSON) {
+        const savedState = JSON.parse(savedStateJSON);
+        // Ensure all keys are present by merging with defaults
+        const loadedData = { ...defaultSignatureData, ...savedState.signatureData };
+        return {
+          lang: savedState.lang || 'fr',
+          theme: savedState.theme || 'light',
+          layout: savedState.layout || 'classic',
+          signatureData: loadedData,
+        };
+      }
+    } catch (error) {
+      console.error('Failed to load state from localStorage:', error);
+    }
+    // Return defaults if nothing is saved or if an error occurred
+    return {
+      lang: 'fr',
+      theme: 'light',
+      layout: 'classic',
+      signatureData: defaultSignatureData,
+    };
+  };
 
-  const [signatureData, setSignatureData] = useState<SignatureData>({
-    firstName: "Emily",
-    lastName: "Cooper",
-    role: "Marketing Associate",
-    company: "Savoir",
-    phoneNumber: "+33 7 12 34 56 78",
-    email: "emily.cooper@savoir.com",
-    address: "1 Place de l'Estrapade, 75005 Paris, France",
-    pictureUrl: "https://i.pravatar.cc/100?u=emilycooper",
-    instagramUrl: "https://www.instagram.com/emilyinparis",
-    facebookUrl: "",
-    linkedinUrl: "https://www.linkedin.com/in/emily-cooper-savoir",
-    websiteUrl: "https://savoir.com",
-    youtubeUrl: "",
-    primaryColor: "#D81B60",
-    secondaryColor: "#3D5A80",
-    disclaimer: "Ce message est confidentiel. Merci de ne pas l'imprimer pour préserver l'environnement.",
-    quote: "Bring your vision to life with our customizable furniture designs!",
-    bookCallUrl: "",
-    bookVisitUrl: "",
-    bookCallLabel: translations.fr.preview.bookCallButton,
-    bookVisitLabel: translations.fr.preview.bookVisitButton,
-  });
+  const [initialState] = useState(loadInitialState);
+
+  const [lang, setLang] = useState<Language>(initialState.lang);
+  const t = translations[lang];
+  const [theme, setTheme] = useState<Theme>(initialState.theme);
+  const [layout, setLayout] = useState<SignatureLayout>(initialState.layout);
+  const [signatureData, setSignatureData] = useState<SignatureData>(initialState.signatureData);
 
   const previewRef = useRef<HTMLDivElement>(null);
   const [copyButtonText, setCopyButtonText] = useState(t.app.copyButton);
   const [copyStatusMessage, setCopyStatusMessage] = useState('');
   const [isGeneratingColors, setIsGeneratingColors] = useState(false);
 
+  const [shareAppearance, setShareAppearance] = useState(true);
+  const [shareCompanyInfo, setShareCompanyInfo] = useState(true);
+  const [shareUrlButtonText, setShareUrlButtonText] = useState(t.form.generateAndCopyLink);
+
+  // Effect to save state to local storage on any change
+  useEffect(() => {
+    try {
+      const stateToSave = { lang, theme, layout, signatureData };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error('Failed to save state to localStorage:', error);
+    }
+  }, [lang, theme, layout, signatureData]);
+
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const templateData = urlParams.get('template');
+    if (templateData) {
+      try {
+        // Unicode-safe Base64 decoding
+        const decodedString = decodeURIComponent(escape(atob(templateData)));
+        const parsedData = JSON.parse(decodedString);
+        
+        if (parsedData.layout) {
+          setLayout(parsedData.layout);
+        }
+
+        const signatureUpdate = { ...parsedData };
+        delete signatureUpdate.layout;
+        setSignatureData(prev => ({ ...prev, ...signatureUpdate }));
+
+      } catch (error) {
+        console.error("Failed to parse template data from URL:", error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     setCopyButtonText(t.app.copyButton);
+    setShareUrlButtonText(t.form.generateAndCopyLink);
 
     setSignatureData(prev => {
         const defaultCallLabels = Object.values(translations).map(langSet => langSet.preview.bookCallButton);
@@ -88,7 +233,7 @@ const App: React.FC = () => {
             bookVisitLabel: isDefaultVisitLabel ? t.preview.bookVisitButton : prev.bookVisitLabel,
         };
     });
-  }, [lang, t.app.copyButton, t.preview.bookCallButton, t.preview.bookVisitButton]);
+  }, [lang, t.app.copyButton, t.preview.bookCallButton, t.preview.bookVisitButton, t.form.generateAndCopyLink]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -110,6 +255,24 @@ const App: React.FC = () => {
 
   const handleLayoutChange = (newLayout: SignatureLayout) => {
     setLayout(newLayout);
+  };
+
+  const handleReset = () => {
+    if (window.confirm("Are you sure you want to reset all fields? This action cannot be undone.")) {
+        // Preserve language setting
+        const currentState = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
+        const currentLang = currentState.lang || 'fr';
+        
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        
+        // Restore language setting after clearing
+        const clearedState = { lang: currentLang };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(clearedState));
+
+        setSignatureData(defaultSignatureData);
+        setLayout('classic');
+        setTheme('light');
+    }
   };
 
   const handleGenerateColors = async () => {
@@ -144,9 +307,7 @@ const App: React.FC = () => {
     if (previewRef.current?.firstElementChild) {
         const signatureHtml = previewRef.current.firstElementChild.innerHTML;
         try {
-            const blob = new Blob([signatureHtml], { type: 'text/html' });
-            const clipboardItem = new ClipboardItem({ 'text/html': blob });
-            await navigator.clipboard.write([clipboardItem]);
+            await copyHtmlToClipboard(signatureHtml);
             
             setCopyButtonText(t.app.copySuccess);
             setCopyStatusMessage(t.app.copySuccessStatus);
@@ -165,6 +326,48 @@ const App: React.FC = () => {
         }
     }
   };
+
+  const handleGenerateAndCopyUrl = () => {
+    const dataToShare: Partial<SignatureData & { layout: SignatureLayout }> = {};
+
+    if (shareAppearance) {
+      dataToShare.layout = layout;
+      dataToShare.primaryColor = signatureData.primaryColor;
+      dataToShare.secondaryColor = signatureData.secondaryColor;
+    }
+
+    if (shareCompanyInfo) {
+      dataToShare.company = signatureData.company;
+      dataToShare.address = signatureData.address;
+      dataToShare.websiteUrl = signatureData.websiteUrl;
+      dataToShare.bookCallUrl = signatureData.bookCallUrl;
+      dataToShare.bookVisitUrl = signatureData.bookVisitUrl;
+      dataToShare.bookCallLabel = signatureData.bookCallLabel;
+      dataToShare.bookVisitLabel = signatureData.bookVisitLabel;
+      dataToShare.quote = signatureData.quote;
+      dataToShare.disclaimer = signatureData.disclaimer;
+    }
+
+    if (Object.keys(dataToShare).length > 0) {
+      const jsonString = JSON.stringify(dataToShare);
+      // Unicode-safe Base64 encoding
+      const base64String = btoa(unescape(encodeURIComponent(jsonString)));
+      
+      const baseUrl = "https://ai.studio/apps/drive/133sdXtU189icU4aOe4_TrxvUtC_sJDGK";
+      const url = new URL(baseUrl);
+      url.searchParams.set('template', base64String);
+      const urlToCopy = url.toString();
+      
+      copyTextToClipboard(urlToCopy).then(() => {
+        setShareUrlButtonText(t.form.linkCopied);
+        setTimeout(() => {
+          setShareUrlButtonText(t.form.generateAndCopyLink);
+        }, 2500);
+      }).catch(err => {
+        console.error('Failed to copy share URL: ', err);
+      });
+    }
+};
 
   return (
     <div className="bg-slate-100 min-h-screen font-sans text-slate-800 flex flex-col">
@@ -190,6 +393,7 @@ const App: React.FC = () => {
               <SignatureForm 
                 data={signatureData} 
                 onInputChange={handleInputChange}
+                onReset={handleReset}
                 t={t.form}
               />
             </div>
@@ -228,6 +432,25 @@ const App: React.FC = () => {
                         onLayoutChange={handleLayoutChange}
                         t={t.form}
                     />
+                </div>
+                <div className="mt-8">
+                  <ShareTemplate
+                    shareAppearance={shareAppearance}
+                    onShareAppearanceChange={setShareAppearance}
+                    shareCompanyInfo={shareCompanyInfo}
+                    onShareCompanyInfoChange={setShareCompanyInfo}
+                    onGenerateAndCopy={handleGenerateAndCopyUrl}
+                    buttonText={shareUrlButtonText}
+                    t={{
+                      shareTemplateTitle: t.form.shareTemplateTitle,
+                      shareAppearance: t.form.shareAppearance,
+                      shareAppearanceDescription: t.form.shareAppearanceDescription,
+                      shareCompanyInfo: t.form.shareCompanyInfo,
+                      shareCompanyInfoDescription: t.form.shareCompanyInfoDescription,
+                      generateAndCopyLink: t.form.generateAndCopyLink,
+                      linkCopied: t.form.linkCopied
+                    }}
+                  />
                 </div>
              </div>
           </div>

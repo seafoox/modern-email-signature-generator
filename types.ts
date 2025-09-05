@@ -37,10 +37,10 @@ export interface TranslationSet {
   };
   form: {
     title: string;
+    resetButton: string;
     personalInfo: string;
-    contactDetails: string;
+    companyInfo: string;
     socialMedia: string;
-    misc: string;
     ctaButtons: string;
     customization: string;
     customizeAppearance: string;
@@ -71,6 +71,13 @@ export interface TranslationSet {
     layoutClassic: string;
     layoutCompact: string;
     layoutModern: string;
+    shareTemplateTitle: string;
+    shareAppearance: string;
+    shareAppearanceDescription: string;
+    shareCompanyInfo: string;
+    shareCompanyInfoDescription: string;
+    generateAndCopyLink: string;
+    linkCopied: string;
   };
   preview: {
     phone: string;
